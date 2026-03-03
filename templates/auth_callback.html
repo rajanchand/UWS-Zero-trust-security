@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ZTS – Authenticating…</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card" style="text-align:center; padding:3rem;">
+            <div class="shield-icon"></div>
+            <h2>Authenticated!</h2>
+            <p class="subtitle">Setting up your session…</p>
+        </div>
+    </div>
+    <script>
+        // Store the session token in localStorage so it survives across pages
+        // (cookies are unreliable inside VS Code Simple Browser / iframes).
+        var token = "{{ token }}";
+        if (token) {
+            localStorage.setItem("zts_session", token);
+            window.location.replace("/dashboard?s=" + encodeURIComponent(token));
+        } else {
+            window.location.replace("/login?error=Authentication+failed.");
+        }
+    </script>
+</body>
+</html>

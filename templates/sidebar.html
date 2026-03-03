@@ -1,0 +1,54 @@
+<!-- Sidebar Navigation -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <h2>ZTS</h2>
+        <p>Zero Trust Security</p>
+    </div>
+
+    <nav class="sidebar-nav">
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Main</div>
+            <a href="/dashboard?s={{ token }}" class="sidebar-link {% if active_page == 'dashboard' %}active{% endif %}">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                Dashboard
+            </a>
+        </div>
+
+        {% if is_superadmin %}
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Administration</div>
+            <a href="/admin/users?s={{ token }}" class="sidebar-link {% if active_page == 'users' %}active{% endif %}">
+                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                User Management
+            </a>
+            <a href="/admin/logs?s={{ token }}" class="sidebar-link {% if active_page == 'logs' %}active{% endif %}">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Audit Logs
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Security</div>
+            <a href="/security?s={{ token }}" class="sidebar-link {% if active_page == 'security' %}active{% endif %}">
+                <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Security Overview
+            </a>
+            <a href="/devices?s={{ token }}" class="sidebar-link {% if active_page == 'devices' %}active{% endif %}">
+                <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Devices
+            </a>
+        </div>
+    </nav>
+
+    <div class="sidebar-user">
+        <div class="sidebar-user-info">
+            <div class="sidebar-avatar">{{ user.username[0]|upper }}</div>
+            <div>
+                <div class="sidebar-username">{{ user.username }}</div>
+                <div class="sidebar-role" style="color: {{ role_meta.color }}">{{ role_meta.label }}</div>
+            </div>
+        </div>
+        <a href="/logout?s={{ token }}" class="btn btn-outline btn-sm btn-block">Logout</a>
+    </div>
+</aside>

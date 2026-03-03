@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZTS – Security Overview</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="dashboard-page">
+    <div class="layout">
+        {% include "sidebar.html" %}
+
+        <div class="main-content">
+            <header class="topbar">
+                <div class="topbar-title">Security Overview</div>
+                <div class="topbar-right">
+                    <span class="badge-risk badge-{{ risk.level }}">Risk: {{ risk.level|upper }}</span>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <!-- Security Grid: Risk Score / Session Info / ZT Checks -->
+                <div class="security-grid">
+                    <!-- Risk Score Card -->
+                    <div class="card risk-card risk-{{ risk.level }}">
+                        <div class="card-header"><h3>Risk Score</h3></div>
+                        <div class="card-body">
+                            <div class="risk-gauge">
+                                <div class="risk-circle">
+                                    <svg viewBox="0 0 120 120">
+                                        <circle cx="60" cy="60" r="50" fill="none" stroke="#e2e5ea" stroke-width="10"/>
+                                        <circle cx="60" cy="60" r="50" fill="none"
+                                                stroke="{% if risk.level == 'low' %}#16a34a{% elif risk.level == 'medium' %}#d97706{% elif risk.level == 'high' %}#ea580c{% else %}#dc2626{% endif %}"
+                                                stroke-width="10"
+                                                stroke-dasharray="{{ risk.score * 3.14 }} 314"
+                                                stroke-linecap="round"
+                                                transform="rotate(-90 60 60)"/>
+                                        <text x="60" y="55" text-anchor="middle" class="risk-number">{{ risk.score }}</text>
+                                        <text x="60" y="72" text-anchor="middle" class="risk-label">{{ risk.level|upper }}</text>
+                                    </svg>
+                                </div>
+                            </div>
+                            {% if risk.factors %}
+                            <ul class="risk-factors-list">
+                                {% for f in risk.factors %}
+                                <li>{{ f }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="risk-ok">No risk factors detected</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Session Info Card -->
+                    <div class="card session-card">
+                        <div class="card-header"><h3>Session Info</h3></div>
+                        <div class="card-body">
+                            <div class="info-row"><span class="info-label">User</span><span class="info-value">{{ user.username }}</span></div>
+                            <div class="info-row"><span class="info-label">Role</span><span class="info-value badge-role" style="background-color: {{ role_meta.color }}">{{ user.role }}</span></div>
+                            <div class="info-row"><span class="info-label">IP Address</span><span class="info-value">{{ ip }}</span></div>
+                            <div class="info-row"><span class="info-label">Location</span><span class="info-value">{{ geo.city }}, {{ geo.country }}</span></div>
+                            <div class="info-row"><span class="info-label">Browser</span><span class="info-value">{{ browser }}</span></div>
+                            <div class="info-row"><span class="info-label">OS</span><span class="info-value">{{ os_name }}</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Zero Trust Checks -->
+                    <div class="card zt-card">
+                        <div class="card-header"><h3>Zero Trust Checks</h3></div>
+                        <div class="card-body">
+                            <div class="zt-check zt-pass"><span class="zt-icon">&#10003;</span> Identity Verified (MFA)</div>
+                            <div class="zt-check zt-pass"><span class="zt-icon">&#10003;</span> Password + OTP Validated</div>
+                            <div class="zt-check {% if risk.level in ['low','medium'] %}zt-pass{% else %}zt-warn{% endif %}">
+                                <span class="zt-icon">{% if risk.level in ['low','medium'] %}&#10003;{% else %}!{% endif %}</span> Device Trust ({{ risk.level }})
+                            </div>
+                            <div class="zt-check zt-pass"><span class="zt-icon">&#10003;</span> Network Location Logged</div>
+                            <div class="zt-check zt-pass"><span class="zt-icon">&#10003;</span> Role-Based Access Enforced</div>
+                            <div class="zt-check zt-pass"><span class="zt-icon">&#10003;</span> Session Timeout Active</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Alerts -->
+                <div class="card" style="margin-bottom:24px">
+                    <div class="card-header"><h3>Recent Security Alerts</h3></div>
+                    <div class="card-body">
+                        {% if security_alerts %}
+                        <ul class="alerts-list">
+                            {% for a in security_alerts %}
+                            <li>
+                                <strong>{{ a.action }}</strong> &mdash; {{ a.detail or 'No details' }}
+                                <div class="alert-time">{{ a.created_at[:16] if a.created_at else '' }} &middot; IP: {{ a.ip_address or '—' }}</div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="no-alerts">No recent security alerts. All clear.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- IP Allow / Block List (SuperAdmin only) -->
+                {% if is_superadmin and ip_list %}
+                <h2 class="section-title">IP Allow / Block List</h2>
+                <div class="table-responsive" style="margin-bottom:24px">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>IP Address</th>
+                                <th>Status</th>
+                                <th>Risk Score</th>
+                                <th>Last Seen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in ip_list %}
+                            <tr>
+                                <td><code>{{ entry.ip }}</code></td>
+                                <td>
+                                    {% if entry.status == 'allowed' %}
+                                    <span class="badge-ip badge-ip-allowed">Allowed</span>
+                                    {% else %}
+                                    <span class="badge-ip badge-ip-blocked">Blocked</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge-risk badge-{% if entry.risk_score < 30 %}low{% elif entry.risk_score < 60 %}medium{% elif entry.risk_score < 85 %}high{% else %}critical{% endif %}">{{ entry.risk_score }}</span>
+                                </td>
+                                <td class="nowrap">{{ entry.last_seen }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Session timeout overlay -->
+    <div id="timeoutOverlay" class="timeout-overlay hidden">
+        <div class="timeout-card">
+            <h2>Session Expired</h2>
+            <p>Your session has timed out due to inactivity.</p>
+            <a href="/login" class="btn btn-primary">Login Again</a>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        var SESSION_TOKEN = localStorage.getItem("zts_session") || "{{ token }}";
+        setInterval(async () => {
+            try {
+                const res = await fetch('/api/heartbeat', { method: 'POST', headers: {'X-Session-Token': SESSION_TOKEN} });
+                if (res.status === 401) { localStorage.removeItem("zts_session"); document.getElementById('timeoutOverlay').classList.remove('hidden'); }
+            } catch(e) {}
+        }, 60000);
+    </script>
+</body>
+</html>

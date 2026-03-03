@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZTS – Account Locked</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="shield-icon locked-icon"></div>
+                <h1>Account Locked</h1>
+                <p class="subtitle">Too many failed attempts</p>
+            </div>
+
+            <div class="locked-info">
+                <p>Your account has been temporarily locked due to multiple failed login attempts.</p>
+                <p>This is a security measure aligned with <strong>Zero Trust principles</strong>.</p>
+                <br>
+                <p><strong>What to do:</strong></p>
+                <ul>
+                    <li>Wait 30 minutes for automatic unlock</li>
+                    <li>Contact your SuperAdmin for immediate unlock</li>
+                </ul>
+            </div>
+
+            <div class="auth-footer">
+                <a href="/login" class="btn btn-outline btn-block">← Try Again</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

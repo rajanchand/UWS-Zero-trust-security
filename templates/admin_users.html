@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZTS – User Management</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="dashboard-page">
+    <div class="layout">
+        {% include "sidebar.html" %}
+
+        <div class="main-content">
+            <header class="topbar">
+                <div class="topbar-title">User Management</div>
+                <div class="topbar-right">
+                    <button class="btn btn-primary" onclick="openCreateModal()">+ Create User</button>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <div class="table-responsive">
+                    <table class="data-table" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Sessions</th>
+                                <th>Last Login</th>
+                                <th>Device / Browser</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in all_users %}
+                            <tr id="row-{{ u.id }}">
+                                <td><strong>{{ u.username }}</strong></td>
+                                <td>{{ u.email }}</td>
+                                <td>
+                                    <select class="role-select" onchange="assignRole('{{ u.id }}', this.value)" data-uid="{{ u.id }}">
+                                        {% for dept in departments %}
+                                        <option value="{{ dept }}" {% if u.role == dept %}selected{% endif %}>{{ dept }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    {% if not u.is_active %}
+                                    <span class="badge-disabled">Disabled</span>
+                                    {% else %}
+                                    <span class="badge-active">Active</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ session_counts.get(u.id, 0) }}</td>
+                                <td>
+                                    {% if last_logins.get(u.id) %}
+                                        {{ last_logins[u.id].created_at[:16] }}
+                                        <div class="device-detail">IP: {{ last_logins[u.id].ip_address or '—' }}</div>
+                                    {% else %}
+                                        <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user_devices.get(u.id) %}
+                                        {% set dev = user_devices[u.id][0] %}
+                                        <div class="device-info">
+                                            <span class="device-ip"><code>{{ dev.ip_address }}</code></span>
+                                            <span class="device-detail">{{ dev.browser or '—' }} / {{ dev.os or '—' }}</span>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">No device data</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="action-btns">
+                                        {% if not u.is_active %}
+                                        <button class="btn btn-xs btn-success" onclick="toggleUser('{{ u.id }}', true)" title="Enable user">Enable</button>
+                                        {% else %}
+                                        <button class="btn btn-xs btn-warning" onclick="toggleUser('{{ u.id }}', false)" title="Disable user">Disable</button>
+                                        {% endif %}
+                                        <button class="btn btn-xs btn-secondary" onclick="forceLogout('{{ u.id }}')" title="Force logout">Logout</button>
+                                        <button class="btn btn-xs btn-danger" onclick="deleteUser('{{ u.id }}', '{{ u.username }}')" title="Delete user">Delete</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Create New User</h3>
+                <button class="modal-close" onclick="closeCreateModal()">&times;</button>
+            </div>
+            <form id="createForm" onsubmit="createUser(event)">
+                <div class="form-group">
+                    <label for="cu_username">Username</label>
+                    <input type="text" id="cu_username" name="username" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="cu_email">Email</label>
+                    <input type="email" id="cu_email" name="email" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="cu_password">Password</label>
+                    <input type="password" id="cu_password" name="password" required minlength="8">
+                </div>
+                <div class="form-group">
+                    <label for="cu_role">Department / Role</label>
+                    <select id="cu_role" name="role" class="role-select">
+                        {% for dept in departments %}
+                        <option value="{{ dept }}">{{ dept }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="createError" class="form-error" style="display:none"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        var SESSION_TOKEN = localStorage.getItem("zts_session") || "{{ token }}";
+
+        function api(url, body) {
+            return fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Session-Token': SESSION_TOKEN },
+                body: JSON.stringify(body)
+            });
+        }
+
+        /* Modal */
+        function openCreateModal() { document.getElementById('createModal').classList.add('active'); }
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.remove('active');
+            document.getElementById('createForm').reset();
+            document.getElementById('createError').style.display = 'none';
+        }
+
+        /* Create User */
+        async function createUser(e) {
+            e.preventDefault();
+            const errEl = document.getElementById('createError');
+            errEl.style.display = 'none';
+            const body = {
+                username: document.getElementById('cu_username').value,
+                email: document.getElementById('cu_email').value,
+                password: document.getElementById('cu_password').value,
+                role: document.getElementById('cu_role').value
+            };
+            const res = await api('/api/admin/create-user', body);
+            const data = await res.json();
+            if (res.ok) {
+                location.reload();
+            } else {
+                errEl.textContent = data.detail || 'Failed to create user';
+                errEl.style.display = 'block';
+            }
+        }
+
+        /* Assign Role */
+        async function assignRole(userId, role) {
+            const res = await api('/api/admin/assign-role', { user_id: userId, role: role });
+            if (!res.ok) {
+                const d = await res.json();
+                alert(d.detail || 'Failed');
+            }
+        }
+
+        /* Toggle Enable/Disable */
+        async function toggleUser(userId, enable) {
+            const res = await api('/api/admin/toggle-user', { user_id: userId, enable: enable });
+            if (res.ok) location.reload();
+            else { const d = await res.json(); alert(d.detail || 'Failed'); }
+        }
+
+        /* Force Logout */
+        async function forceLogout(userId) {
+            if (!confirm('Force logout this user?')) return;
+            const res = await api('/api/admin/force-logout', { user_id: userId });
+            if (res.ok) location.reload();
+            else { const d = await res.json(); alert(d.detail || 'Failed'); }
+        }
+
+        /* Delete User */
+        async function deleteUser(userId, name) {
+            if (!confirm('Permanently delete user "' + name + '"? This cannot be undone.')) return;
+            const res = await api('/api/admin/delete-user', { user_id: userId });
+            if (res.ok) {
+                document.getElementById('row-' + userId).remove();
+            } else {
+                const d = await res.json();
+                alert(d.detail || 'Failed');
+            }
+        }
+    </script>
+</body>
+</html>

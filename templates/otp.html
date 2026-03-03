@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZTS – Verify OTP</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Verification Required</h1>
+                <p class="subtitle">Multi-Factor Authentication</p>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-danger">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            {% if risk and risk.score > 30 %}
+            <div class="alert alert-warning">
+                <strong>Elevated risk detected (Score: {{ risk.score }})</strong>
+                <ul class="risk-factors">
+                    {% for f in risk.factors %}
+                    <li>{{ f }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <div class="otp-info">
+                <p>A one-time password has been sent to <strong>{{ email_hint }}</strong></p>
+                {% if otp_display %}
+                <div class="otp-demo-box">
+                    <span class="demo-label">Demo OTP (no email configured)</span>
+                    <span class="demo-otp">{{ otp_display }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <form method="POST" action="/verify-otp" id="otpForm">
+                <input type="hidden" name="pending_token" value="{{ pending_token }}">
+                <div class="form-group">
+                    <label for="otp_code">Enter 6-digit OTP</label>
+                    <div class="otp-inputs">
+                        <input type="text" id="otp_code" name="otp_code" maxlength="6"
+                               pattern="[0-9]{6}" inputmode="numeric" autocomplete="one-time-code"
+                               placeholder="000000" required class="otp-field">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    Verify & Continue
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <a href="/login" class="link-back">← Back to Login</a>
+                <p class="disclaimer">OTP expires in 5 minutes</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-focus and format OTP input
+        const otpField = document.getElementById('otp_code');
+        otpField.focus();
+        otpField.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '').slice(0, 6);
+        });
+    </script>
+</body>
+</html>

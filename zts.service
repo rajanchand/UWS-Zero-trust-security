@@ -1,0 +1,15 @@
+[Unit]
+Description=ZTS – Zero Trust Security Demo
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/zts
+Environment="PATH=/opt/zts/.venv/bin"
+ExecStart=/opt/zts/.venv/bin/gunicorn main:app -c gunicorn_conf.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

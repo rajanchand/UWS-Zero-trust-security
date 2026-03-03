@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZTS – Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% if is_superadmin %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    {% endif %}
+</head>
+<body class="dashboard-page">
+    <div class="layout">
+        {% include "sidebar.html" %}
+
+        <div class="main-content">
+            <header class="topbar">
+                <div class="topbar-title">Dashboard</div>
+                <div class="topbar-right">
+                    <span style="font-size:12px; color:var(--text-muted)">Last login: {{ last_login_time }}</span>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <!-- Welcome Banner -->
+                <div class="welcome-banner">
+                    <div class="welcome-text">
+                        <h2>Welcome back, {{ user.username }}</h2>
+                        <p>{{ role_meta.label }} &middot; Zero Trust Architecture Active</p>
+                    </div>
+                    <div class="welcome-meta">
+                        <span>IP: {{ ip }}</span>
+                        <span>{{ geo.city }}, {{ geo.country }}</span>
+                        <span>{{ browser }}</span>
+                    </div>
+                </div>
+
+                {% if is_superadmin %}
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card accent-blue">
+                        <div class="stat-label">Total Users</div>
+                        <div class="stat-value">{{ stats.total_users }}</div>
+                    </div>
+                    <div class="stat-card accent-green">
+                        <div class="stat-label">Active Sessions</div>
+                        <div class="stat-value">{{ stats.active_sessions }}</div>
+                    </div>
+                    <div class="stat-card accent-orange">
+                        <div class="stat-label">Offline Users</div>
+                        <div class="stat-value">{{ offline_users }}</div>
+                    </div>
+                    <div class="stat-card accent-red">
+                        <div class="stat-label">Risk Score</div>
+                        <div class="stat-value">{{ risk.score }}</div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Login Attempts (7 days)</h3>
+                        <div class="chart-container">
+                            <canvas id="loginChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Risk Distribution</h3>
+                        <div class="chart-container">
+                            <canvas id="riskChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Department Dashboard -->
+                <h2 class="section-title">Department Dashboard</h2>
+                {% for section in sections %}
+                <div class="dept-group">
+                    <h3 class="dept-title" style="border-left-color: {{ section.meta.color }}">{{ section.meta.label }}</h3>
+                    <div class="dept-cards">
+                        {% for item in section.cards %}
+                        <div class="card dept-card">
+                            <h4>{{ item.title }}</h4>
+                            <p>{{ item.desc }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Session timeout overlay -->
+    <div id="timeoutOverlay" class="timeout-overlay hidden">
+        <div class="timeout-card">
+            <h2>Session Expired</h2>
+            <p>Your session has timed out due to inactivity.</p>
+            <a href="/login" class="btn btn-primary">Login Again</a>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        var SESSION_TOKEN = localStorage.getItem("zts_session") || "{{ token }}";
+
+        setInterval(async () => {
+            try {
+                const res = await fetch('/api/heartbeat', {
+                    method: 'POST',
+                    headers: {'X-Session-Token': SESSION_TOKEN},
+                });
+                if (res.status === 401) {
+                    localStorage.removeItem("zts_session");
+                    document.getElementById('timeoutOverlay').classList.remove('hidden');
+                }
+            } catch(e) {}
+        }, 60000);
+
+        {% if is_superadmin %}
+        new Chart(document.getElementById('loginChart'), {
+            type: 'bar',
+            data: {
+                labels: {{ stats.chart_labels | tojson }},
+                datasets: [
+                    { label: 'Successful', data: {{ stats.chart_success | tojson }}, backgroundColor: 'rgba(22,163,74,0.7)', borderRadius: 4 },
+                    { label: 'Failed', data: {{ stats.chart_fail | tojson }}, backgroundColor: 'rgba(220,38,38,0.7)', borderRadius: 4 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f0f0f0' } },
+                    x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('riskChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Low', 'Medium', 'High', 'Critical'],
+                datasets: [{ data: [{{ stats.risk_dist.low }}, {{ stats.risk_dist.medium }}, {{ stats.risk_dist.high }}, {{ stats.risk_dist.critical }}], backgroundColor: ['#16a34a', '#d97706', '#ea580c', '#dc2626'], borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
+        });
+        {% endif %}
+    </script>
+</body>
+</html>

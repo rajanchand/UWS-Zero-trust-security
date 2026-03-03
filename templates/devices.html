@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZTS – Devices</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="dashboard-page">
+    <div class="layout">
+        {% include "sidebar.html" %}
+
+        <div class="main-content">
+            <header class="topbar">
+                <div class="topbar-title">Devices</div>
+                <div class="topbar-right">
+                    <span style="font-size:12px; color:var(--text-muted)">{{ devices|length }} device{{ 's' if devices|length != 1 else '' }} registered</span>
+                </div>
+            </header>
+
+            <div class="content-area">
+                {% if devices %}
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Device Name</th>
+                                <th>Status</th>
+                                <th>Browser</th>
+                                <th>OS</th>
+                                <th>IP Address</th>
+                                <th>MAC Address</th>
+                                <th>Location</th>
+                                <th>Last Online</th>
+                                <th>Approved By</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in devices %}
+                            <tr>
+                                <td><strong>{{ d.username }}</strong></td>
+                                <td>{{ d.device_name }}</td>
+                                <td>
+                                    {% if d.is_trusted %}
+                                    <span class="badge-active">Trusted</span>
+                                    {% else %}
+                                    <span class="badge-disabled">Untrusted</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ d.browser }}</td>
+                                <td>{{ d.os }}</td>
+                                <td><code>{{ d.ip_address }}</code></td>
+                                <td><code>{{ d.mac_address }}</code></td>
+                                <td>{{ d.location }}</td>
+                                <td class="nowrap">{{ d.last_seen }}</td>
+                                <td>
+                                    {% if d.is_trusted %}
+                                    <span class="badge-action badge-info">{{ d.approved_by }}</span>
+                                    {% else %}
+                                    <span class="badge-action badge-danger">{{ d.approved_by }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="action-btns">
+                                        {% if d.is_trusted %}
+                                        <button class="btn btn-xs btn-warning" onclick="toggleDevice('{{ d.id }}', false)">Revoke</button>
+                                        {% else %}
+                                        <button class="btn btn-xs btn-success" onclick="toggleDevice('{{ d.id }}', true)">Approve</button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <p>No devices registered yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Session timeout overlay -->
+    <div id="timeoutOverlay" class="timeout-overlay hidden">
+        <div class="timeout-card">
+            <h2>Session Expired</h2>
+            <p>Your session has timed out due to inactivity.</p>
+            <a href="/login" class="btn btn-primary">Login Again</a>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        var SESSION_TOKEN = localStorage.getItem("zts_session") || "{{ token }}";
+
+        async function toggleDevice(deviceId, trust) {
+            const res = await fetch('/api/device/trust', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Session-Token': SESSION_TOKEN },
+                body: JSON.stringify({device_id: deviceId, trust: trust})
+            });
+            if (res.ok) location.reload();
+        }
+
+        setInterval(async () => {
+            try {
+                const res = await fetch('/api/heartbeat', { method: 'POST', headers: {'X-Session-Token': SESSION_TOKEN} });
+                if (res.status === 401) { localStorage.removeItem("zts_session"); document.getElementById('timeoutOverlay').classList.remove('hidden'); }
+            } catch(e) {}
+        }, 60000);
+    </script>
+</body>
+</html>

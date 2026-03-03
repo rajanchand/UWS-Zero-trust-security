@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZTS – Login</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>ZTS</h1>
+                <p class="subtitle">Zero Trust Security</p>
+                <p class="tagline">Never Trust, Always Verify</p>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-danger">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="/login" id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="username" name="username" placeholder="Enter your username" required autocomplete="username">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
+                        <button type="button" class="toggle-pw" onclick="togglePassword()">Show</button>
+                    </div>
+                </div>
+
+                <input type="hidden" id="fingerprint" name="fingerprint">
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <div class="security-badges">
+                    <span class="badge">MFA Enabled</span>
+                    <span class="badge">Zero Trust</span>
+                    <span class="badge">Geo Verified</span>
+                </div>
+                <p class="disclaimer">Protected by Zero Trust Architecture · NIST SP 800-207</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        // Generate device fingerprint before submit
+        document.getElementById('loginForm').addEventListener('submit', function() {
+            document.getElementById('fingerprint').value = generateFingerprint();
+        });
+
+        function togglePassword() {
+            const pw = document.getElementById('password');
+            pw.type = pw.type === 'password' ? 'text' : 'password';
+        }
+    </script>
+</body>
+</html>
